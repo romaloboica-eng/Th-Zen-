@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zen — реальный мессенджер</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #0e1621;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app {
+            width: 100%;
+            height: 100vh;
+            background: #17212b;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-container, .chat-container {
+            background: #17212b;
+            padding: 32px 24px;
+            width: 90%;
+            max-width: 340px;
+            border-radius: 28px;
+            text-align: center;
+        }
+
+        .auth-container h2 {
+            font-size: 32px;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .auth-container p {
+            color: #8e9eae;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            background: #242f3a;
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 16px;
+            margin: 8px 0;
+            outline: none;
+        }
+
+        button {
+            background: #2b5278;
+            border: none;
+            padding: 14px;
+            border-radius: 14px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+
+        .chat-header {
+            background: #17212b;
+            padding: 12px 16px;
+            border-bottom: 0.5px solid #242f3a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-btn {
+            background: none;
+            font-size: 28px;
+            width: auto;
+            margin: 0;
+        }
+
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 15px;
+        }
+
+        .my {
+            background: #2b5278;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .other {
+            background: #242f3a;
+            color: #e1e3e6;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .input-area {
+            background: #17212b;
+            padding: 10px 12px;
+            display: flex;
+            gap: 8px;
+            border-top: 0.5px solid #242f3a;
+        }
+
+        #messageInput {
+            flex: 1;
+            background: #242f3a;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 24px;
+            color: white;
+            font-size: 16px;
+        }
+
+        .action-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .call-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0e1621;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        #remoteVideo, #localVideo {
+            width: 90%;
+            max-width: 300px;
+            background: #000;
+            border-radius: 20px;
+            aspect-ratio: 9/16;
+            object-fit: cover;
+        }
+
+        #localVideo {
+            width: 120px;
+            position: absolute;
+            bottom: 100px;
+            right: 16px;
+        }
+
+        .incoming-call {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .incoming-buttons {
+            display: flex;
+            gap: 30px;
+        }
+
+        .accept-call, .decline-call {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            font-size: 30px;
+        }
+
+        .accept-call { background: #34c759; }
+        .decline-call { background: #ff3b30; }
+
+        .chats-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 0.5px solid #242f3a;
+            cursor: pointer;
+        }
+
+        .chat-avatar {
+            width: 52px;
+            height: 52px;
+            background: #2b5278;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: white;
+        }
+
+        .chat-name {
+            color: white;
+            font-size: 16px;
+        }
+
+        .hide { display: none; }
+    </style>
+</head>
+<body>
+<div class="app">
+    <!-- Экран входа -->
+    <div id="authScreen" class="screen">
+        <div class="auth-container">
+            <h2>Zen ✨</h2>
+            <p>Введите номер телефона</p>
+            <input type="tel" id="phoneInput" placeholder="+7 XXX XXX XX XX">
+            <button id="loginBtn">Войти / Зарегистрироваться</button>
+        </div>
+    </div>
+
+    <!-- Экран чатов -->
+    <div id="chatsScreen" class="hide" style="flex:1; display:flex; flex-direction:column;">
+        <div class="chat-header">
+            <div>
+                <span id="userNameDisplay" style="color:white; font-weight:bold;"></span>
+            </div>
+            <button id="newChatBtn" style="width:auto; padding:8px 16px; margin:0;">+ Новый чат</button>
+        </div>
+        <div id="chatsList" class="chats-list"></div>
+    </div>
+
+    <!-- Окно чата -->
+    <div id="chatWindow" class="hide" style="flex:1; display:flex; flex-direction:column;">
+        <div class="chat-header">
+            <button id="backToChatsBtn" class="back-btn" style="width:auto;">←</button>
+            <span id="chatTitle" style="color:white; font-weight:bold;"></span>
+            <button id="callBtn" style="width:auto; padding:8px 16px; margin:0;">📞 Звонок</button>
+        </div>
+        <div id="messagesArea" class="messages-area"></div>
+        <div class="input-area">
+            <input type="file" id="imageInput" accept="image/*" style="display:none">
+            <button id="photoBtn" class="action-btn">📷</button>
+            <button id="voiceMsgBtn" class="action-btn">🎤</button>
+            <input type="text" id="messageInput" placeholder="Сообщение...">
+            <button id="sendBtn" class="action-btn">➤</button>
+        </div>
+    </div>
+
+    <!-- Поиск -->
+    <div id="searchOverlay" class="hide" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:20; align-items:center; justify-content:center;">
+        <div style="background:#17212b; width:90%; max-width:320px; border-radius:24px; padding:24px;">
+            <h3 style="color:white;">Найти по номеру</h3>
+            <input type="tel" id="searchPhoneInput" placeholder="+7 XXX XXX XX XX">
+            <div id="searchResult"></div>
+            <button id="closeSearchBtn">Закрыть</button>
+        </div>
+    </div>
+
+    <!-- Входящий звонок -->
+    <div id="incomingCallOverlay" class="incoming-call">
+        <h3 id="callerName" style="color:white;">Входящий звонок...</h3>
+        <div class="incoming-buttons">
+            <button id="acceptCallBtn" class="accept-call">📞</button>
+            <button id="declineCallBtn" class="decline-call">❌</button>
+        </div>
+    </div>
+
+    <!-- Звонок -->
+    <div id="callOverlay" class="call-overlay">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+        <button id="endCallBtn" style="width:auto; padding:12px 24px; background:#ff3b30;">📞 Завершить</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getFirestore, collection, doc, addDoc, query, where, getDocs, updateDoc, onSnapshot, orderBy, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-storage.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyANkmkJZvj7clEcf3x1FKRsfUSQDbvmXBc",
+        authDomain: "th-zen.firebaseapp.com",
+        projectId: "th-zen",
+        storageBucket: "th-zen.firebasestorage.app",
+        messagingSenderId: "54520558647",
+        appId: "1:54520558647:web:26dd3984bb90f482c93bb2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Состояние
+    let currentUser = null;
+    let currentChatId = null;
+    let currentChatOtherId = null;
+    let messagesUnsubscribe = null;
+    let chatsUnsubscribe = null;
+
+    // WebRTC
+    let localStream = null;
+    let peerConnection = null;
+    let currentCallDocId = null;
+    const configuration = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+    // DOM элементы
+    const authScreen = document.getElementById('authScreen');
+    const chatsScreen = document.getElementById('chatsScreen');
+    const chatWindow = document.getElementById('chatWindow');
+    const phoneInput = document.getElementById('phoneInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const chatsListDiv = document.getElementById('chatsList');
+    const messagesArea = document.getElementById('messagesArea');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const photoBtn = document.getElementById('photoBtn');
+    const imageInput = document.getElementById('imageInput');
+    const voiceMsgBtn = document.getElementById('voiceMsgBtn');
+    const callBtn = document.getElementById('callBtn');
+    const backToChatsBtn = document.getElementById('backToChatsBtn');
+    const chatTitle = document.getElementById('chatTitle');
+    const userNameDisplay = document.getElementById('userNameDisplay');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const searchOverlay = document.getElementById('searchOverlay');
+    const searchPhoneInput = document.getElementById('searchPhoneInput');
+    const searchResult = document.getElementById('searchResult');
+    const closeSearchBtn = document.getElementById('closeSearchBtn');
+    const incomingCallOverlay = document.getElementById('incomingCallOverlay');
+    const callerName = document.getElementById('callerName');
+    const acceptCallBtn = document.getElementById('acceptCallBtn');
+    const declineCallBtn = document.getElementById('declineCallBtn');
+    const callOverlay = document.getElementById('callOverlay');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const localVideo = document.getElementById('localVideo');
+    const endCallBtn = document.getElementById('endCallBtn');
+
+    // Форматирование телефона
+    function formatPhone(phone) {
+        const clean = phone.replace(/\D/g, '');
+        if (clean.length === 11) return '+' + clean;
+        if (clean.length === 10) return '+7' + clean;
+        return phone;
+    }
+
+    function formatDisplay(phone) {
+        const clean = phone.replace(/\D/g, '');
+        if (clean.length === 11 && clean.startsWith('7')) {
+            return `+7 ${clean.slice(1,4)} ${clean.slice(4,7)} ${clean.slice(7,9)} ${clean.slice(9,11)}`;
+        }
+        return phone;
+    }
+
+    // Вход
+    async function login() {
+        let rawPhone = phoneInput.value.replace(/\D/g, '');
+        if (rawPhone.length === 10) rawPhone = '7' + rawPhone;
+        if (rawPhone.length !== 11) {
+            alert('Введите 10 цифр номера');
+            return;
+        }
+        const phone = '+' + rawPhone;
+        
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('phone', '==', phone));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            const name = 'User' + phone.slice(-4);
+            const newUser = await addDoc(usersRef, {
+                phone: phone,
+                name: name,
+                createdAt: serverTimestamp()
+            });
+            currentUser = { id: newUser.id, phone, name };
+        } else {
+            const docSnap = snapshot.docs[0];
+            currentUser = { id: docSnap.id, ...docSnap.data() };
+        }
+        
+        localStorage.setItem('zen_user', JSON.stringify(currentUser));
+        userNameDisplay.innerText = currentUser.name;
+        authScreen.classList.add('hide');
+        chatsScreen.classList.remove('hide');
+        loadChats();
+        listenForCalls();
+    }
+
+    // Загрузка чатов
+    function loadChats() {
+        if (chatsUnsubscribe) chatsUnsubscribe();
+        const chatsRef = collection(db, 'chats');
+        const q = query(chatsRef, where('participants', 'array-contains', currentUser.phone));
+        
+        chatsUnsubscribe = onSnapshot(q, (snapshot) => {
+            const chats = [];
+            snapshot.forEach(doc => {
+                chats.push({ id: doc.id, ...doc.data() });
+            });
+            renderChats(chats);
+        });
+    }
+
+    async function renderChats(chats) {
+        const userChats = chats.filter(c => c.participants.includes(currentUser.phone));
+        
+        if (userChats.length === 0) {
+            chatsListDiv.innerHTML = '<div style="text-align:center; color:#8e9eae; padding:40px;">Нет чатов<br>Нажмите + Новый чат</div>';
+            return;
+        }
+        
+        chatsListDiv.innerHTML = '';
+        for (const chat of userChats) {
+            const otherPhone = chat.participants.find(p => p !== currentUser.phone);
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('phone', '==', otherPhone));
+            const snapshot = await getDocs(q);
+            const otherName = snapshot.empty ? otherPhone : snapshot.docs[0].data().name;
+            
+            const div = document.createElement('div');
+            div.className = 'chat-item';
+            div.innerHTML = `
+                <div class="chat-avatar">${otherName[0]?.toUpperCase() || '?'}</div>
+                <div>
+                    <div class="chat-name">${escapeHtml(otherName)}</div>
+                    <div style="color:#8e9eae; font-size:12px;">${escapeHtml(chat.lastMessage || 'Нет сообщений')}</div>
+                </div>
+            `;
+            div.onclick = () => openChat(chat.id, otherPhone, otherName);
+            chatsListDiv.appendChild(div);
+        }
+    }
+
+    async function openChat(chatId, otherPhone, otherName) {
+        currentChatId = chatId;
+        currentChatOtherId = otherPhone;
+        chatTitle.innerText = otherName;
+        
+        chatWindow.classList.remove('hide');
+        chatsScreen.classList.add('hide');
+        
+        if (messagesUnsubscribe) messagesUnsubscribe();
+        const messagesRef = collection(db, 'chats', chatId, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'asc'));
+        
+        messagesUnsubscribe = onSnapshot(q, (snapshot) => {
+            messagesArea.innerHTML = '';
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                const isMy = msg.from === currentUser.phone;
+                if (msg.type === 'text') {
+                    messagesArea.innerHTML += `<div class="message ${isMy ? 'my' : 'other'}">${escapeHtml(msg.text)}</div>`;
+                } else if (msg.type === 'image') {
+                    messagesArea.innerHTML += `<div class="message ${isMy ? 'my' : 'other'}"><img src="${msg.imageUrl}" style="max-width:200px; border-radius:12px;"></div>`;
+                } else if (msg.type === 'voice') {
+                    messagesArea.innerHTML += `<div class="message ${isMy ? 'my' : 'other'}"><audio controls src="${msg.voiceUrl}"></audio></div>`;
+                }
+            });
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        });
+    }
+
+    async function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text || !currentChatId) return;
+        
+        await addDoc(collection(db, 'chats', currentChatId, 'messages'), {
+            text: text,
+            from: currentUser.phone,
+            timestamp: serverTimestamp(),
+            type: 'text'
+        });
+        
+        await updateDoc(doc(db, 'chats', currentChatId), {
+            lastMessage: text,
+            lastTime: serverTimestamp()
+        });
+        
+        messageInput.value = '';
+    }
+
+    async function sendImage(file) {
+        if (!file || !currentChatId) return;
+        const fileRef = ref(storage, `images/${Date.now()}_${file.name}`);
+        await uploadBytes(fileRef, file);
+        const url = await getDownloadURL(fileRef);
+        await addDoc(collection(db, 'chats', currentChatId, 'messages'), {
+            imageUrl: url,
+            from: currentUser.phone,
+            timestamp: serverTimestamp(),
+            type: 'image'
+        });
+    }
+
+    // Голосовые сообщения
+    let mediaRecorder, audioChunks = [], isRecording = false;
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const fileRef = ref(storage, `voice/${Date.now()}.webm`);
+                await uploadBytes(fileRef, audioBlob);
+                const url = await getDownloadURL(fileRef);
+                if (currentChatId) {
+                    await addDoc(collection(db, 'chats', currentChatId, 'messages'), {
+                        voiceUrl: url,
+                        from: currentUser.phone,
+                        timestamp: serverTimestamp(),
+                        type: 'voice'
+                    });
+                }
+                stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRecorder.start();
+            isRecording = true;
+            voiceMsgBtn.style.background = '#ff3b30';
+        } catch(e) { alert("Нужен доступ к микрофону"); }
+    }
+    function stopRecording() {
+        if (mediaRecorder && isRecording) {
+            mediaRecorder.stop();
+            isRecording = false;
+            voiceMsgBtn.style.background = '#2b5278';
+        }
+    }
+
+    // Поиск и создание чата
+    async function searchUser() {
+        let rawPhone = searchPhoneInput.value.replace(/\D/g, '');
+        if (rawPhone.length === 10) rawPhone = '7' + rawPhone;
+        if (rawPhone.length !== 11) {
+            searchResult.innerHTML = '<div style="color:#8e9eae;">Введите 10 цифр</div>';
+            return;
+        }
+        const phone = '+' + rawPhone;
+        
+        if (phone === currentUser.phone) {
+            searchResult.innerHTML = '<div style="color:#8e9eae;">Это вы</div>';
+            return;
+        }
+        
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('phone', '==', phone));
+        const snapshot = await getDocs(q);
+        
+        let otherName = phone;
+        let otherId = null;
+        if (!snapshot.empty) {
+            otherName = snapshot.docs[0].data().name;
+            otherId = snapshot.docs[0].id;
+        }
+        
+        searchResult.innerHTML = `
+            <div style="background:#242f3a; padding:12px; border-radius:12px; margin-top:12px;">
+                <div>${escapeHtml(otherName)}</div>
+                <div style="font-size:12px; color:#8e9eae;">${formatDisplay(phone)}</div>
+                <button id="startChatBtn" style="margin-top:8px;">Написать</button>
+            </div>
+        `;
+        
+        document.getElementById('startChatBtn')?.addEventListener('click', async () => {
+            // Проверяем существующий чат
+            const chatsRef = collection(db, 'chats');
+            const qChat = query(chatsRef, where('participants', 'array-contains', currentUser.phone));
+            const snapshotChat = await getDocs(qChat);
+            let existingChat = null;
+            snapshotChat.forEach(doc => {
+                const participants = doc.data().participants;
+                if (participants.includes(phone)) {
+                    existingChat = { id: doc.id, ...doc.data() };
+                }
+            });
+            
+            if (existingChat) {
+                openChat(existingChat.id, phone, otherName);
+            } else {
+                const newChat = await addDoc(collection(db, 'chats'), {
+                    participants: [currentUser.phone, phone],
+                    lastMessage: '',
+                    createdAt: serverTimestamp()
+                });
+                openChat(newChat.id, phone, otherName);
+            }
+            searchOverlay.classList.add('hide');
+            searchPhoneInput.value = '';
+            searchResult.innerHTML = '';
+        });
+    }
+
+    // ========== ЗВОНКИ ==========
+    async function listenForCalls() {
+        const callsRef = collection(db, 'calls');
+        const q = query(callsRef, where('to', '==', currentUser.phone), where('status', '==', 'waiting'));
+        
+        onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach(async (change) => {
+                if (change.type === 'added') {
+                    const callData = change.doc.data();
+                    currentCallDocId = change.doc.id;
+                    const usersRef = collection(db, 'users');
+                    const userQuery = query(usersRef, where('phone', '==', callData.from));
+                    const userSnap = await getDocs(userQuery);
+                    const fromName = userSnap.empty ? callData.from : userSnap.docs[0].data().name;
+                    callerName.innerText = `${fromName} звонит...`;
+                    incomingCallOverlay.classList.remove('hide');
+                    
+                    acceptCallBtn.onclick = () => acceptCall(callData.from);
+                    declineCallBtn.onclick = async () => {
+                        await updateDoc(doc(db, 'calls', currentCallDocId), { status: 'declined' });
+                        incomingCallOverlay.classList.add('hide');
+                    };
+                }
+            });
+        });
+    }
+
+    async function startCall() {
+        if (!currentChatOtherId) return;
+        callOverlay.classList.remove('hide');
+        
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+        
+        const callRef = await addDoc(collection(db, 'calls'), {
+            from: currentUser.phone,
+            to: currentChatOtherId,
+            status: 'waiting',
+            createdAt: serverTimestamp()
+        });
+        currentCallDocId = callRef.id;
+        
+        peerConnection = new RTCPeerConnection(configuration);
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        
+        peerConnection.ontrack = (event) => {
+            remoteVideo.srcObject = event.streams[0];
+        };
+        
+        peerConnection.onicecandidate = async (event) => {
+            if (event.candidate) {
+                await addDoc(collection(db, 'calls', currentCallDocId, 'ice'), {
+                    candidate: event.candidate,
+                    timestamp: serverTimestamp()
+                });
+            }
+        };
+        
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        await updateDoc(callRef, { offer: offer });
+        
+        // Слушаем ответ
+        const unsubscribe = onSnapshot(doc(db, 'calls', currentCallDocId), async (docSnap) => {
+            const data = docSnap.data();
+            if (data?.answer && peerConnection.remoteDescription === null) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                unsubscribe();
+            }
+        });
+        
+        // Слушаем ICE
+        onSnapshot(collection(db, 'calls', currentCallDocId, 'ice'), (snapshot) => {
+            snapshot.docChanges().forEach(async (change) => {
+                if (change.type === 'added' && peerConnection) {
+                    const ice = change.doc.data();
+                    if (ice.candidate) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(ice.candidate));
+                    }
+                }
+            });
+        });
+    }
+
+    async function acceptCall(fromPhone) {
+        incomingCallOverlay.classList.add('hide');
+        callOverlay.classList.remove('hide');
+        
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+        
+        peerConnection = new RTCPeerConnection(configuration);
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        
+        peerConnection.ontrack = (event) => {
+            remoteVideo.srcObject = event.streams[0];
+        };
+        
+        peerConnection.onicecandidate = async (event) => {
+            if (event.candidate) {
+                await addDoc(collection(db, 'calls', currentCallDocId, 'ice'), {
+                    candidate: event.candidate,
+                    timestamp: serverTimestamp()
+                });
+            }
+        };
+        
+        const callDoc = await getDoc(doc(db, 'calls', currentCallDocId));
+        const offer = callDoc.data().offer;
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        await updateDoc(doc(db, 'calls', currentCallDocId), { answer: answer, status: 'active' });
+        
+        onSnapshot(collection(db, 'calls', currentCallDocId, 'ice'), (snapshot) => {
+            snapshot.docChanges().forEach(async (change) => {
+                if (change.type === 'added' && peerConnection) {
+                    const ice = change.doc.data();
+                    if (ice.candidate) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(ice.candidate));
+                    }
+                }
+            });
+        });
+    }
+
+    async function endCall() {
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        if (peerConnection) peerConnection.close();
+        peerConnection = null;
+        localStream = null;
+        callOverlay.classList.add('hide');
+        remoteVideo.srcObject = null;
+        localVideo.srcObject = null;
+        if (currentCallDocId) {
+            await updateDoc(doc(db, 'calls', currentCallDocId), { status: 'ended' });
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;');
+    }
+
+    // События
+    loginBtn.onclick = login;
+    sendBtn.onclick = sendMessage;
+    messageInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+    photoBtn.onclick = () => imageInput.click();
+    imageInput.onchange = (e) => { if(e.target.files[0]) sendImage(e.target.files[0]); };
+    voiceMsgBtn.onmousedown = startRecording;
+    voiceMsgBtn.onmouseup = stopRecording;
+    voiceMsgBtn.ontouchstart = startRecording;
+    voiceMsgBtn.ontouchend = stopRecording;
+    callBtn.onclick = startCall;
+    endCallBtn.onclick = endCall;
+    backToChatsBtn.onclick = () => {
+        chatWindow.classList.add('hide');
+        chatsScreen.classList.remove('hide');
+        if (messagesUnsubscribe) messagesUnsubscribe();
+        currentChatId = null;
+    };
+    newChatBtn.onclick = () => searchOverlay.classList.remove('hide');
+    closeSearchBtn.onclick = () => {
+        searchOverlay.classList.add('hide');
+        searchPhoneInput.value = '';
+        searchResult.innerHTML = '';
+    };
+    searchPhoneInput.addEventListener('input', searchUser);
+    
+    // Восстановление сессии
+    const savedUser = localStorage.getItem('zen_user');
+    if (savedUser) {
+        const user = JSON.parse(savedUser);
+        currentUser = user;
+        userNameDisplay.innerText = currentUser.name;
+        authScreen.classList.add('hide');
+        chatsScreen.classList.remove('hide');
+        loadChats();
+        listenForCalls();
+    }
+</script>
+</body>
+</html>
